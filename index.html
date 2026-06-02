@@ -198,13 +198,7 @@ td.time-cell { color: #555; font-size: 11px; white-space: nowrap; }
 </head>
 <body>
 
-<!-- API 키 바 -->
-<div class="key-bar">
-  <span class="key-label">🔑 GEMINI KEY</span>
-  <input class="key-input" id="geminiKey" type="password" placeholder="Gemini API Key">
-  <button class="key-btn" onclick="saveKeys()">저장</button>
-  <span class="key-status" id="keyStatus">미설정</span>
-</div>
+
 
 <!-- 헤더 -->
 <div class="card">
@@ -309,23 +303,8 @@ let currentFilter = 'all';
 
 // ── 초기화 ────────────────────────────────────────────
 window.onload = () => {
-  const saved = localStorage.getItem('geminiKey');
-  if (saved) {
-    document.getElementById('geminiKey').value = saved;
-    document.getElementById('keyStatus').textContent = '✓ 설정됨';
-    document.getElementById('keyStatus').className = 'key-status ok';
-  }
   updateDateDisplay();
 };
-
-function saveKeys() {
-  const key = document.getElementById('geminiKey').value.trim();
-  if (!key) return showToast('⚠️ Gemini API Key를 입력하세요');
-  localStorage.setItem('geminiKey', key);
-  document.getElementById('keyStatus').textContent = '✓ 설정됨';
-  document.getElementById('keyStatus').className = 'key-status ok';
-  showToast('✅ 키 저장됨');
-}
 
 // ── 날짜 ──────────────────────────────────────────────
 const DAYS = ['일','월','화','수','목','금','토'];
@@ -434,8 +413,7 @@ async function analyzeAll() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             title: article.title,
-            description: article.description,
-            geminiKey: localStorage.getItem('geminiKey')
+            description: article.description
           })
         });
         const result = await res.json();
