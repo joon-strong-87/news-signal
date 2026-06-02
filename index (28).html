@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>뉴스 시그널 수집기</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
+  background: #0f1117; color: #e8e8e8;
+  min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+  padding: 40px 20px; overflow-y: auto;
+}
+
+/* ── API 키 바 ── */
+.key-bar {
+  width: 100%; max-width: 960px; margin-bottom: 16px;
+  background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 12px;
+  padding: 16px 20px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.key-label { font-size: 12px; color: #555; font-weight: 600; white-space: nowrap; }
+.key-input {
+  background: #0f1117; border: 1px solid #2a2d3a; border-radius: 8px;
+  padding: 8px 12px; color: #e8e8e8; font-size: 13px; outline: none;
+  flex: 1; min-width: 160px; max-width: 260px; transition: border-color 0.2s;
+}
+.key-input:focus { border-color: #555; }
+.key-btn {
+  padding: 8px 16px; border-radius: 8px; border: 1px solid #2a2d3a;
+  background: #0f1117; color: #aaa; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s;
+}
+.key-btn:hover { border-color: #e07b39; color: #e07b39; }
+.key-status { font-size: 12px; color: #555; }
+.key-status.ok { color: #4ade80; }
+
+/* ── 헤더 카드 ── */
+.card {
+  background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 16px;
+  padding: 32px 36px; width: 100%; max-width: 960px; margin-bottom: 20px;
+}
+h1 { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 6px; display: flex; align-items: center; gap: 10px; }
+.subtitle { font-size: 13px; color: #666; }
+
+/* ── 날짜 네비게이터 ── */
+.date-nav {
+  width: 100%; max-width: 960px; margin-bottom: 20px;
+  display: flex; align-items: center; gap: 12px;
+}
+.nav-btn {
+  width: 40px; height: 40px; border-radius: 10px; border: 1px solid #2a2d3a;
+  background: #1a1d27; color: #aaa; font-size: 18px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s; flex-shrink: 0;
+}
+.nav-btn:hover { border-color: #e07b39; color: #e07b39; }
+.date-display {
+  flex: 1; background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 10px;
+  padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.date-text { font-size: 16px; font-weight: 700; color: #fff; }
+.date-sub { font-size: 12px; color: #555; }
+.date-picker-input {
+  background: transparent; border: none; outline: none;
+  color: transparent; width: 0; height: 0; position: absolute;
+}
+.date-pick-btn {
+  padding: 6px 12px; border-radius: 6px; border: 1px solid #2a2d3a;
+  background: #0f1117; color: #888; font-size: 11px; cursor: pointer;
+  transition: all 0.2s;
+}
+.date-pick-btn:hover { border-color: #e07b39; color: #e07b39; }
+.today-btn {
+  padding: 6px 12px; border-radius: 6px; border: 1px solid #2a2d3a;
+  background: #0f1117; color: #888; font-size: 11px; cursor: pointer;
+  transition: all 0.2s; white-space: nowrap;
+}
+.today-btn:hover { border-color: #4ade80; color: #4ade80; }
+
+/* ── 수집 컨트롤 카드 ── */
+.ctrl-card {
+  background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 16px;
+  padding: 24px 28px; width: 100%; max-width: 960px; margin-bottom: 20px;
+}
+.ctrl-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 11px; color: #888; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+.field input, .field select {
+  background: #0f1117; border: 1px solid #2a2d3a; border-radius: 8px;
+  padding: 10px 14px; color: #e8e8e8; font-size: 13px; outline: none;
+  transition: border-color 0.2s;
+}
+.field input:focus, .field select:focus { border-color: #e07b39; }
+.field select option { background: #1a1d27; }
+.btn {
+  padding: 10px 22px; border-radius: 8px; border: none;
+  font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+}
+.btn-primary { background: #e07b39; color: #fff; }
+.btn-primary:hover { background: #c96a2a; }
+.btn-primary:disabled { background: #2a2d3a; color: #555; cursor: not-allowed; }
+.btn-ghost { background: transparent; color: #888; border: 1px solid #2a2d3a; padding: 10px 16px; font-size: 12px; }
+.btn-ghost:hover { border-color: #555; color: #ccc; }
+.btn-save { background: #1a6e3a; color: #fff; }
+.btn-save:hover { background: #155e30; }
+.btn-save:disabled { background: #2a2d3a; color: #555; cursor: not-allowed; }
+
+/* ── 진행바 ── */
+.progress-wrap { display: none; margin-top: 20px; }
+.progress-label { display: flex; justify-content: space-between; font-size: 12px; color: #888; margin-bottom: 8px; }
+.progress-bar-bg { background: #0f1117; border-radius: 6px; height: 7px; overflow: hidden; border: 1px solid #1e2130; }
+.progress-bar { height: 100%; width: 0%; border-radius: 6px; background: linear-gradient(90deg, #e07b39, #f5b07a); transition: width 0.3s ease; }
+
+/* ── 요약 ── */
+.summary-bar {
+  width: 100%; max-width: 960px; margin-bottom: 16px;
+  display: flex; gap: 12px; flex-wrap: wrap;
+}
+.summary-chip {
+  background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 10px;
+  padding: 10px 18px; font-size: 13px; color: #888;
+  display: flex; align-items: center; gap: 8px;
+}
+.summary-chip span { color: #e07b39; font-weight: 700; font-size: 15px; }
+.summary-chip.sentiment-pos span { color: #4ade80; }
+.summary-chip.sentiment-neg span { color: #f87171; }
+
+/* ── 테이블 래퍼 ── */
+.table-wrap {
+  width: 100%; max-width: 960px;
+  background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 16px;
+  overflow: hidden;
+}
+.table-header {
+  padding: 18px 24px; border-bottom: 1px solid #2a2d3a;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.table-title { font-size: 14px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; }
+.count-badge {
+  background: #1e2235; color: #e07b39; font-size: 11px; font-weight: 700;
+  padding: 3px 9px; border-radius: 20px;
+}
+.filter-row { display: flex; gap: 8px; }
+.filter-btn {
+  padding: 5px 12px; border-radius: 6px; border: 1px solid #2a2d3a;
+  background: #0f1117; color: #666; font-size: 11px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s;
+}
+.filter-btn:hover { border-color: #e07b39; color: #e07b39; }
+.filter-btn.active { border-color: #e07b39; color: #e07b39; background: #1e1208; }
+
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th {
+  background: #1f2235; color: #888; font-weight: 600;
+  padding: 10px 14px; text-align: left; border-bottom: 1px solid #2a2d3a;
+  white-space: nowrap;
+}
+td { padding: 10px 14px; border-bottom: 1px solid #1e2130; color: #ccc; vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #1e2235; }
+
+td.title-cell { min-width: 220px; max-width: 360px; }
+td.title-cell a { color: #ccc; text-decoration: none; transition: color 0.2s; }
+td.title-cell a:hover { color: #e07b39; }
+td.desc-cell { max-width: 280px; color: #666; font-size: 11px; line-height: 1.5; }
+td.subject-cell { color: #a78bfa; font-size: 11px; min-width: 90px; }
+td.category-cell { color: #60a5fa; font-size: 11px; white-space: nowrap; }
+td.tickers-cell { min-width: 100px; }
+td.time-cell { color: #555; font-size: 11px; white-space: nowrap; }
+
+.sentiment-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 4px;
+  font-size: 10px; font-weight: 700; white-space: nowrap;
+}
+.sentiment-badge.pos { background: #0d2a1a; color: #4ade80; border: 1px solid #1a4a2a; }
+.sentiment-badge.neg { background: #2a0d0d; color: #f87171; border: 1px solid #4a1a1a; }
+.sentiment-badge.neu { background: #1e2130; color: #888; border: 1px solid #2a2d3a; }
+
+.ticker-tag {
+  display: inline-block; padding: 2px 6px; border-radius: 4px;
+  font-size: 10px; font-weight: 600; background: #1a1a2e; color: #818cf8;
+  border: 1px solid #2a2a4a; margin: 1px; white-space: nowrap;
+}
+
+.analyzing { color: #555; font-style: italic; font-size: 11px; }
+.empty-row td { text-align: center; padding: 48px; color: #444; font-style: italic; }
+
+/* ── 토스트 ── */
+.toast {
+  position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+  background: #1a1d27; border: 1px solid #e07b39; border-radius: 10px;
+  padding: 12px 24px; font-size: 13px; color: #e8e8e8; z-index: 999;
+  animation: fadeUp 0.3s ease;
+}
+@keyframes fadeUp { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+</style>
+</head>
+<body>
+
+<!-- API 키 바 -->
+<div class="key-bar">
+  <span class="key-label">🔑 GEMINI KEY</span>
+  <input class="key-input" id="geminiKey" type="password" placeholder="Gemini API Key">
+  <button class="key-btn" onclick="saveKeys()">저장</button>
+  <span class="key-status" id="keyStatus">미설정</span>
+</div>
+
+<!-- 헤더 -->
+<div class="card">
+  <h1>📡 뉴스 시그널 수집기</h1>
+  <p class="subtitle">네이버 뉴스 수집 · Gemini 분석 (주제 / 감성 / 종목 / 카테고리) · Supabase 저장</p>
+</div>
+
+<!-- 날짜 네비게이터 -->
+<div class="date-nav">
+  <button class="nav-btn" onclick="moveDate(-1)">‹</button>
+  <div class="date-display">
+    <div>
+      <div class="date-text" id="dateText">—</div>
+      <div class="date-sub" id="dateSub">날짜를 선택하세요</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="today-btn" onclick="goToday()">오늘</button>
+      <button class="date-pick-btn" onclick="document.getElementById('datePicker').showPicker()">📅 선택</button>
+      <input type="date" id="datePicker" class="date-picker-input" onchange="onDatePick(this.value)">
+    </div>
+  </div>
+  <button class="nav-btn" onclick="moveDate(1)">›</button>
+</div>
+
+<!-- 수집 컨트롤 -->
+<div class="ctrl-card">
+  <div class="ctrl-row">
+    <div class="field" style="flex:2;min-width:160px;">
+      <label>검색 키워드</label>
+      <input type="text" id="queryInput" value="경제 주식" placeholder="예: 삼성전자, 반도체, 코스피">
+    </div>
+    <div class="field" style="min-width:90px;">
+      <label>수집 수</label>
+      <select id="displayCount">
+        <option value="20">20건</option>
+        <option value="50" selected>50건</option>
+        <option value="100">100건</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" id="collectBtn" onclick="collectNews()">▶ 수집 시작</button>
+    <button class="btn btn-ghost" id="loadBtn" onclick="loadFromDB()">☁ DB 불러오기</button>
+    <button class="btn btn-save" id="saveBtn" onclick="saveAllToDB()" disabled>💾 저장</button>
+  </div>
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-label">
+      <span id="progressText">분석 중...</span>
+      <span id="progressPct">0%</span>
+    </div>
+    <div class="progress-bar-bg"><div class="progress-bar" id="progressBar"></div></div>
+  </div>
+</div>
+
+<!-- 요약 바 -->
+<div class="summary-bar" id="summaryBar" style="display:none;">
+  <div class="summary-chip">전체 <span id="sumTotal">0</span>건</div>
+  <div class="summary-chip sentiment-pos">긍정 <span id="sumPos">0</span></div>
+  <div class="summary-chip sentiment-neg">부정 <span id="sumNeg">0</span></div>
+  <div class="summary-chip">중립 <span id="sumNeu">0</span></div>
+  <div class="summary-chip">종목 언급 <span id="sumTickers">0</span>건</div>
+</div>
+
+<!-- 뉴스 테이블 -->
+<div class="table-wrap">
+  <div class="table-header">
+    <div class="table-title">
+      뉴스 목록
+      <span class="count-badge" id="countBadge">0</span>
+    </div>
+    <div class="filter-row">
+      <button class="filter-btn active" data-filter="all" onclick="setFilter('all',this)">전체</button>
+      <button class="filter-btn" data-filter="긍정" onclick="setFilter('긍정',this)">긍정</button>
+      <button class="filter-btn" data-filter="부정" onclick="setFilter('부정',this)">부정</button>
+      <button class="filter-btn" data-filter="tickers" onclick="setFilter('tickers',this)">종목 있음</button>
+    </div>
+  </div>
+  <div style="overflow-x:auto;">
+    <table id="newsTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>제목</th>
+          <th>요약</th>
+          <th>주제</th>
+          <th>감성</th>
+          <th>관련 종목</th>
+          <th>카테고리</th>
+          <th>시간</th>
+        </tr>
+      </thead>
+      <tbody id="newsBody">
+        <tr class="empty-row"><td colspan="8">날짜를 선택하고 수집을 시작하세요</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// ── 상태 ──────────────────────────────────────────────
+let currentDate = new Date();
+let articles = [];
+let currentFilter = 'all';
+
+// ── 초기화 ────────────────────────────────────────────
+window.onload = () => {
+  const saved = localStorage.getItem('geminiKey');
+  if (saved) {
+    document.getElementById('geminiKey').value = saved;
+    document.getElementById('keyStatus').textContent = '✓ 설정됨';
+    document.getElementById('keyStatus').className = 'key-status ok';
+  }
+  updateDateDisplay();
+};
+
+function saveKeys() {
+  const key = document.getElementById('geminiKey').value.trim();
+  if (!key) return showToast('⚠️ Gemini API Key를 입력하세요');
+  localStorage.setItem('geminiKey', key);
+  document.getElementById('keyStatus').textContent = '✓ 설정됨';
+  document.getElementById('keyStatus').className = 'key-status ok';
+  showToast('✅ 키 저장됨');
+}
+
+// ── 날짜 ──────────────────────────────────────────────
+const DAYS = ['일','월','화','수','목','금','토'];
+
+function updateDateDisplay() {
+  const d = currentDate;
+  const ymd = toYMD(d);
+  const dayName = DAYS[d.getDay()];
+  document.getElementById('dateText').textContent =
+    `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${dayName})`;
+  document.getElementById('dateSub').textContent = ymd;
+  document.getElementById('datePicker').value = ymd;
+}
+
+function toYMD(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function moveDate(delta) {
+  currentDate = new Date(currentDate);
+  currentDate.setDate(currentDate.getDate() + delta);
+  updateDateDisplay();
+  resetTable();
+}
+
+function goToday() {
+  currentDate = new Date();
+  updateDateDisplay();
+  resetTable();
+}
+
+function onDatePick(val) {
+  if (!val) return;
+  currentDate = new Date(val + 'T12:00:00');
+  updateDateDisplay();
+  resetTable();
+}
+
+function resetTable() {
+  articles = [];
+  renderTable();
+  document.getElementById('summaryBar').style.display = 'none';
+  document.getElementById('saveBtn').disabled = true;
+}
+
+// ── 수집 ──────────────────────────────────────────────
+async function collectNews() {
+  const query = document.getElementById('queryInput').value.trim();
+  if (!query) return showToast('⚠️ 키워드를 입력하세요');
+
+  const display = document.getElementById('displayCount').value;
+  const collectBtn = document.getElementById('collectBtn');
+  collectBtn.disabled = true;
+  collectBtn.textContent = '수집 중...';
+
+  document.getElementById('progressWrap').style.display = 'block';
+  document.getElementById('progressBar').style.width = '0%';
+  document.getElementById('progressText').textContent = '뉴스 수집 중...';
+  document.getElementById('progressPct').textContent = '0%';
+
+  try {
+    const date = toYMD(currentDate);
+    const res = await fetch(`/api/naver-news?query=${encodeURIComponent(query)}&display=${display}&date=${date}`);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    articles = (data.articles || []).map(a => ({ ...a, article_date: date }));
+
+    if (articles.length === 0) {
+      showToast(`📭 ${date} 날짜의 뉴스가 없어요`);
+      collectBtn.disabled = false;
+      collectBtn.textContent = '▶ 수집 시작';
+      document.getElementById('progressWrap').style.display = 'none';
+      renderTable();
+      return;
+    }
+
+    renderTable();
+    showToast(`📰 ${articles.length}건 수집됨. Gemini 분석 시작...`);
+
+    // Gemini 분석
+    await analyzeAll();
+
+    document.getElementById('saveBtn').disabled = false;
+    showToast(`✅ 분석 완료! 저장 버튼을 눌러 DB에 저장하세요`);
+
+  } catch(e) {
+    showToast('❌ 오류: ' + e.message);
+  }
+
+  collectBtn.disabled = false;
+  collectBtn.textContent = '▶ 수집 시작';
+}
+
+async function analyzeAll() {
+  const total = articles.length;
+  const CONCURRENCY = 5;
+
+  for (let i = 0; i < total; i += CONCURRENCY) {
+    const batch = articles.slice(i, i + CONCURRENCY);
+    await Promise.all(batch.map(async (article, bi) => {
+      const idx = i + bi;
+      try {
+        const res = await fetch('/api/gemini-news', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: article.title,
+            description: article.description,
+            geminiKey: localStorage.getItem('geminiKey')
+          })
+        });
+        const result = await res.json();
+        articles[idx].subject = result.subject || '';
+        articles[idx].sentiment = result.sentiment || '중립';
+        articles[idx].tickers = result.tickers || [];
+        articles[idx].category = result.category || '';
+      } catch {
+        articles[idx].subject = '—';
+        articles[idx].sentiment = '중립';
+        articles[idx].tickers = [];
+        articles[idx].category = '';
+      }
+      updateRow(idx);
+    }));
+
+    const done = Math.min(i + CONCURRENCY, total);
+    const pct = Math.round((done / total) * 100);
+    document.getElementById('progressBar').style.width = pct + '%';
+    document.getElementById('progressText').textContent = `Gemini 분석 중... ${done}/${total}`;
+    document.getElementById('progressPct').textContent = pct + '%';
+  }
+
+  document.getElementById('progressText').textContent = '분석 완료!';
+  updateSummary();
+}
+
+// ── DB 저장 / 불러오기 ────────────────────────────────
+async function saveAllToDB() {
+  if (articles.length === 0) return showToast('⚠️ 저장할 데이터가 없어요');
+  const saveBtn = document.getElementById('saveBtn');
+  saveBtn.disabled = true;
+  saveBtn.textContent = '저장 중...';
+
+  try {
+    const res = await fetch('/api/save-news', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ articles })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    showToast(`💾 ${data.saved}건 저장 완료!`);
+  } catch(e) {
+    showToast('❌ 저장 오류: ' + e.message);
+    saveBtn.disabled = false;
+  }
+  saveBtn.textContent = '💾 저장';
+}
+
+async function loadFromDB() {
+  const date = toYMD(currentDate);
+  const loadBtn = document.getElementById('loadBtn');
+  loadBtn.textContent = '불러오는 중...';
+
+  try {
+    const res = await fetch(`/api/load-news?date=${date}`);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    articles = data.articles || [];
+    if (articles.length === 0) {
+      showToast(`📭 ${date}에 저장된 뉴스가 없어요`);
+    } else {
+      showToast(`☁ ${articles.length}건 불러옴`);
+      document.getElementById('saveBtn').disabled = false;
+    }
+    renderTable();
+    updateSummary();
+  } catch(e) {
+    showToast('❌ 불러오기 오류: ' + e.message);
+  }
+  loadBtn.textContent = '☁ DB 불러오기';
+}
+
+// ── 렌더링 ────────────────────────────────────────────
+function getFiltered() {
+  if (currentFilter === 'all') return articles;
+  if (currentFilter === 'tickers') return articles.filter(a => a.tickers && a.tickers.length > 0);
+  return articles.filter(a => a.sentiment === currentFilter);
+}
+
+function renderTable() {
+  const tbody = document.getElementById('newsBody');
+  const filtered = getFiltered();
+  document.getElementById('countBadge').textContent = filtered.length;
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="8">${articles.length === 0 ? '날짜를 선택하고 수집을 시작하세요' : '해당 필터 결과 없음'}</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map((a, i) => rowHTML(i + 1, a)).join('');
+}
+
+function rowHTML(i, a) {
+  const sentClass = a.sentiment === '긍정' ? 'pos' : a.sentiment === '부정' ? 'neg' : 'neu';
+  const sentText = a.sentiment || '';
+  const time = a.published_at ? new Date(a.published_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '—';
+  const tickers = (a.tickers || []).map(t => `<span class="ticker-tag">${t}</span>`).join('');
+  const isAnalyzing = !a.subject;
+
+  return `<tr>
+    <td style="color:#555;font-size:11px;">${i}</td>
+    <td class="title-cell"><a href="${a.url}" target="_blank">${a.title}</a></td>
+    <td class="desc-cell">${a.description || ''}</td>
+    <td class="subject-cell" id="subj-${a.url?.slice(-10)}">${isAnalyzing ? '<span class="analyzing">분석 중...</span>' : (a.subject || '—')}</td>
+    <td>${sentText ? `<span class="sentiment-badge ${sentClass}">${sentText}</span>` : '<span class="analyzing">—</span>'}</td>
+    <td class="tickers-cell">${tickers || '<span style="color:#333">—</span>'}</td>
+    <td class="category-cell">${a.category || '—'}</td>
+    <td class="time-cell">${time}</td>
+  </tr>`;
+}
+
+function updateRow(idx) {
+  renderTable();
+}
+
+function updateSummary() {
+  const total = articles.length;
+  const pos = articles.filter(a => a.sentiment === '긍정').length;
+  const neg = articles.filter(a => a.sentiment === '부정').length;
+  const neu = articles.filter(a => a.sentiment === '중립').length;
+  const withTickers = articles.filter(a => a.tickers && a.tickers.length > 0).length;
+
+  document.getElementById('sumTotal').textContent = total;
+  document.getElementById('sumPos').textContent = pos;
+  document.getElementById('sumNeg').textContent = neg;
+  document.getElementById('sumNeu').textContent = neu;
+  document.getElementById('sumTickers').textContent = withTickers;
+  document.getElementById('summaryBar').style.display = total > 0 ? 'flex' : 'none';
+}
+
+function setFilter(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTable();
+}
+
+// ── 토스트 ────────────────────────────────────────────
+function showToast(msg, duration = 3000) {
+  document.querySelectorAll('.toast').forEach(e => e.remove());
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), duration);
+}
+</script>
+</body>
+</html>
