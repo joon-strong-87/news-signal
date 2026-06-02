@@ -11,6 +11,9 @@ export default async function handler(req, res) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY 환경변수 없음' });
 
+  const MODEL = 'gemini-1.5-flash';
+  console.log('사용 모델:', MODEL, '/ 키 앞 10자:', apiKey.slice(0, 10));
+
   const prompt = `다음 뉴스 기사를 분석해서 JSON으로만 답해줘. 다른 말은 하지 마.
 
 제목: ${title}
@@ -27,20 +30,21 @@ export default async function handler(req, res) {
 tickers는 뉴스와 직접 관련된 한국 상장 종목만, 없으면 빈 배열.`;
 
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.1, maxOutputTokens: 256 }
-        })
-      }
-    );
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
+    console.log('요청 URL (키 제외):', url.replace(apiKey, 'KEY_HIDDEN'));
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.1, maxOutputTokens: 256 }
+      })
+    });
 
     if (!response.ok) {
       const errText = await response.text();
+      console.error('Gemini 오류:', response.status, errText);
       return res.status(500).json({ error: `Gemini API 오류: ${response.status} - ${errText}` });
     }
 
