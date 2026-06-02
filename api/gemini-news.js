@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY 환경변수 없음' });
 
-  const MODEL = 'gemini-1.5-flash';
+  const MODEL = 'gemini-3.1-flash-lite';
   console.log('사용 모델:', MODEL, '/ 키 앞 10자:', apiKey.slice(0, 10));
 
   const prompt = `다음 뉴스 기사를 분석해서 JSON으로만 답해줘. 다른 말은 하지 마.
