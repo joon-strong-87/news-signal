@@ -8,6 +8,9 @@ export default async function handler(req, res) {
   const { title, description } = req.body;
   if (!title) return res.status(400).json({ error: 'title required' });
 
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY 환경변수 없음' });
+
   const prompt = `다음 뉴스 기사를 분석해서 JSON으로만 답해줘. 다른 말은 하지 마.
 
 제목: ${title}
@@ -25,7 +28,7 @@ tickers는 뉴스와 직접 관련된 한국 상장 종목만, 없으면 빈 배
 
   try {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -35,6 +38,11 @@ tickers는 뉴스와 직접 관련된 한국 상장 종목만, 없으면 빈 배
         })
       }
     );
+
+    if (!response.ok) {
+      const errText = await response.text();
+      return res.status(500).json({ error: `Gemini API 오류: ${response.status} - ${errText}` });
+    }
 
     const data = await response.json();
     const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
