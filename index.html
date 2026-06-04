@@ -162,6 +162,24 @@ td.stock-cell    { color: #3b82f6; font-family: monospace; font-size: 11px; }
 .analyzing { color: #555; font-style: italic; font-size: 11px; }
 .empty-row td { text-align: center; padding: 48px; color: #444; font-style: italic; }
 
+/* ── 날짜 토글 ── */
+.toggle-wrap { cursor: pointer; display: inline-flex; align-items: center; }
+.toggle-track {
+  width: 40px; height: 22px; border-radius: 11px; background: #2a2d3a;
+  position: relative; transition: background 0.2s; flex-shrink: 0;
+}
+.toggle-track.on { background: #e07b39; }
+.toggle-thumb {
+  position: absolute; top: 3px; left: 3px;
+  width: 16px; height: 16px; border-radius: 50%; background: #fff;
+  transition: left 0.2s;
+}
+.toggle-track.on .toggle-thumb { left: 21px; }
+.date-mode-bar {
+  width: 100%; max-width: 960px; margin-bottom: 12px;
+  display: flex; align-items: center; gap: 12px;
+}
+
 /* ── 토스트 ── */
 .toast {
   position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
@@ -194,7 +212,21 @@ td.stock-cell    { color: #3b82f6; font-family: monospace; font-size: 11px; }
     <p class="subtitle">네이버 뉴스 수집 · Gemini 분석 (주제 / 감성 / 종목 / 카테고리) · Supabase 저장</p>
   </div>
 
-  <div class="date-nav">
+  <!-- 날짜 필터 토글 -->
+  <div class="date-mode-bar">
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#888;" onclick="toggleNewsDateFilter()">
+      <div class="toggle-wrap">
+        <div class="toggle-track on" id="newsDateToggleTrack">
+          <div class="toggle-thumb"></div>
+        </div>
+      </div>
+      <span id="newsDateFilterLabel">날짜 필터 <strong style="color:#e07b39">ON</strong></span>
+    </label>
+    <span style="font-size:11px;color:#444;">OFF 시 범위 날짜로 수집</span>
+  </div>
+
+  <!-- 단일 날짜 모드 -->
+  <div class="date-nav" id="newsDateNav">
     <button class="nav-btn" onclick="moveDate('news', -1)">‹</button>
     <div class="date-display">
       <div>
@@ -208,6 +240,21 @@ td.stock-cell    { color: #3b82f6; font-family: monospace; font-size: 11px; }
       </div>
     </div>
     <button class="nav-btn" onclick="moveDate('news', 1)">›</button>
+  </div>
+
+  <!-- 범위 날짜 모드 -->
+  <div class="date-nav" id="newsDateRange" style="display:none;">
+    <div class="date-display" style="gap:16px;flex-wrap:wrap;">
+      <div class="field" style="flex:1;min-width:140px;">
+        <label>시작일</label>
+        <input type="date" id="newsDateFrom" style="background:#0f1117;border:1px solid #2a2d3a;border-radius:8px;padding:8px 12px;color:#e8e8e8;font-size:13px;outline:none;width:100%;">
+      </div>
+      <div style="color:#555;font-size:20px;padding-top:22px;">~</div>
+      <div class="field" style="flex:1;min-width:140px;">
+        <label>종료일</label>
+        <input type="date" id="newsDateTo" style="background:#0f1117;border:1px solid #2a2d3a;border-radius:8px;padding:8px 12px;color:#e8e8e8;font-size:13px;outline:none;width:100%;">
+      </div>
+    </div>
   </div>
 
   <div class="ctrl-card">
@@ -271,7 +318,21 @@ td.stock-cell    { color: #3b82f6; font-family: monospace; font-size: 11px; }
     <p class="subtitle">금감원 DART 공시 수집 · Gemini 분석 (주제 / 감성 / 종목 / 카테고리) · Supabase 저장</p>
   </div>
 
-  <div class="date-nav">
+  <!-- 날짜 필터 토글 -->
+  <div class="date-mode-bar">
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#888;" onclick="toggleDartDateFilter()">
+      <div class="toggle-wrap">
+        <div class="toggle-track on" id="dartDateToggleTrack" style="background:#3b82f6;">
+          <div class="toggle-thumb"></div>
+        </div>
+      </div>
+      <span id="dartDateFilterLabel">날짜 필터 <strong style="color:#3b82f6">ON</strong></span>
+    </label>
+    <span style="font-size:11px;color:#444;">OFF 시 범위 날짜로 수집</span>
+  </div>
+
+  <!-- 단일 날짜 모드 -->
+  <div class="date-nav" id="dartDateNav">
     <button class="nav-btn" onclick="moveDate('dart', -1)">‹</button>
     <div class="date-display">
       <div>
@@ -287,8 +348,27 @@ td.stock-cell    { color: #3b82f6; font-family: monospace; font-size: 11px; }
     <button class="nav-btn" onclick="moveDate('dart', 1)">›</button>
   </div>
 
+  <!-- 범위 날짜 모드 -->
+  <div class="date-nav" id="dartDateRange" style="display:none;">
+    <div class="date-display" style="gap:16px;flex-wrap:wrap;">
+      <div class="field" style="flex:1;min-width:140px;">
+        <label>시작일</label>
+        <input type="date" id="dartDateFrom" style="background:#0f1117;border:1px solid #2a2d3a;border-radius:8px;padding:8px 12px;color:#e8e8e8;font-size:13px;outline:none;width:100%;">
+      </div>
+      <div style="color:#555;font-size:20px;padding-top:22px;">~</div>
+      <div class="field" style="flex:1;min-width:140px;">
+        <label>종료일</label>
+        <input type="date" id="dartDateTo" style="background:#0f1117;border:1px solid #2a2d3a;border-radius:8px;padding:8px 12px;color:#e8e8e8;font-size:13px;outline:none;width:100%;">
+      </div>
+    </div>
+  </div>
+
   <div class="ctrl-card">
     <div class="ctrl-row">
+      <div class="field" style="flex:2;min-width:160px;">
+        <label>회사명 / 공시명 검색 (선택)</label>
+        <input type="text" id="dartQuery" placeholder="예: 삼성전자, 유상증자, 사업보고서">
+      </div>
       <div class="field" style="min-width:90px;">
         <label>수집 수</label>
         <select id="dartCount">
@@ -393,6 +473,36 @@ function onDatePick(tab, val) {
   tab === 'news' ? resetNews() : resetDart();
 }
 
+
+// ── 날짜 필터 토글 ───────────────────────────────────
+let newsDateFilterOn = true;
+
+function toggleNewsDateFilter() {
+  newsDateFilterOn = !newsDateFilterOn;
+  const track = document.getElementById('newsDateToggleTrack');
+  const label = document.getElementById('newsDateFilterLabel');
+  const nav   = document.getElementById('newsDateNav');
+  const range = document.getElementById('newsDateRange');
+
+  if (newsDateFilterOn) {
+    track.classList.add('on');
+    label.innerHTML = '날짜 필터 <strong style="color:#e07b39">ON</strong>';
+    nav.style.display   = 'flex';
+    range.style.display = 'none';
+  } else {
+    track.classList.remove('on');
+    label.innerHTML = '날짜 필터 <strong style="color:#888">OFF</strong>';
+    nav.style.display   = 'none';
+    range.style.display = 'flex';
+    // 기본값: 최근 7일
+    const to = new Date(); const from = new Date();
+    from.setDate(from.getDate() - 7);
+    document.getElementById('newsDateFrom').value = toYMD(from);
+    document.getElementById('newsDateTo').value   = toYMD(to);
+  }
+  resetNews();
+}
+
 // ── 초기화 ────────────────────────────────────────────
 window.onload = () => {
   updateDateDisplay('news');
@@ -419,8 +529,18 @@ async function collectNews() {
   setProgress('news', 0, '뉴스 수집 중...');
 
   try {
-    const date = toYMD(state.news.date);
-    const res = await fetch(`/api/naver-news?query=${encodeURIComponent(query)}&display=${display}&date=${date}`);
+    let apiUrl;
+    if (newsDateFilterOn) {
+      const date = toYMD(state.news.date);
+      apiUrl = `/api/naver-news?query=${encodeURIComponent(query)}&display=${display}&date=${date}`;
+    } else {
+      const from = document.getElementById('newsDateFrom').value;
+      const to   = document.getElementById('newsDateTo').value;
+      if (!from || !to) return showToast('⚠️ 시작일과 종료일을 입력하세요');
+      apiUrl = `/api/naver-news?query=${encodeURIComponent(query)}&display=${display}&dateFrom=${from}&dateTo=${to}`;
+    }
+    const date = newsDateFilterOn ? toYMD(state.news.date) : (document.getElementById('newsDateFrom').value || toYMD(state.news.date));
+    const res = await fetch(apiUrl);
     const data = await res.json();
     if (data.error) throw new Error(data.error);
 
@@ -541,6 +661,37 @@ function updateNewsSummary() {
   document.getElementById('newsSummaryBar').style.display = a.length ? 'flex' : 'none';
 }
 
+
+// ── 공시 날짜 필터 토글 ──────────────────────────────
+let dartDateFilterOn = true;
+
+function toggleDartDateFilter() {
+  dartDateFilterOn = !dartDateFilterOn;
+  const track = document.getElementById('dartDateToggleTrack');
+  const label = document.getElementById('dartDateFilterLabel');
+  const nav   = document.getElementById('dartDateNav');
+  const range = document.getElementById('dartDateRange');
+
+  if (dartDateFilterOn) {
+    track.style.background = '#3b82f6';
+    track.classList.add('on');
+    label.innerHTML = '날짜 필터 <strong style="color:#3b82f6">ON</strong>';
+    nav.style.display   = 'flex';
+    range.style.display = 'none';
+  } else {
+    track.style.background = '';
+    track.classList.remove('on');
+    label.innerHTML = '날짜 필터 <strong style="color:#888">OFF</strong>';
+    nav.style.display   = 'none';
+    range.style.display = 'flex';
+    const to = new Date(); const from = new Date();
+    from.setDate(from.getDate() - 7);
+    document.getElementById('dartDateFrom').value = toYMD(from);
+    document.getElementById('dartDateTo').value   = toYMD(to);
+  }
+  resetDart();
+}
+
 // ══════════════════ 공시 ══════════════════════════════
 
 function resetDart() {
@@ -558,15 +709,53 @@ async function collectDart() {
   setProgress('dart', 0, '공시 수집 중...');
 
   try {
-    const date8 = toYMD8(state.dart.date);
-    const date  = toYMD(state.dart.date);
-    const res = await fetch(`/api/dart-disclosures?date=${date8}&count=${count}`);
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
+    const query = document.getElementById('dartQuery').value.trim();
+    let allItems = [];
+    let dateForSave;
 
-    state.dart.items = (data.items || []).map(i => ({ ...i, rcept_dt: date }));
+    if (dartDateFilterOn) {
+      const date8 = toYMD8(state.dart.date);
+      dateForSave = toYMD(state.dart.date);
+      const res = await fetch(`/api/dart-disclosures?date=${date8}&count=${count}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      allItems = data.items || [];
+    } else {
+      const from = document.getElementById('dartDateFrom').value;
+      const to   = document.getElementById('dartDateTo').value;
+      if (!from || !to) return showToast('⚠️ 시작일과 종료일을 입력하세요');
+      dateForSave = from;
+      // 범위: from~to 순회 (최대 14일)
+      const fromD = new Date(from + 'T12:00:00');
+      const toD   = new Date(to   + 'T12:00:00');
+      const diffDays = Math.min(Math.round((toD-fromD)/(1000*60*60*24)) + 1, 14);
+      for (let d = 0; d < diffDays; d++) {
+        const cur = new Date(fromD); cur.setDate(cur.getDate() + d);
+        const date8 = toYMD8(cur);
+        const dateStr = toYMD(cur);
+        const res = await fetch(`/api/dart-disclosures?date=${date8}&count=100`);
+        const data = await res.json();
+        if (!data.error) allItems.push(...(data.items||[]).map(i=>({...i, rcept_dt: dateStr})));
+      }
+    }
+
+    // 키워드 필터 (클라이언트)
+    if (query) {
+      const q = query.toLowerCase();
+      allItems = allItems.filter(i =>
+        i.corp_name?.toLowerCase().includes(q) ||
+        i.report_nm?.toLowerCase().includes(q) ||
+        i.stock_code?.includes(q)
+      );
+    }
+
+    const date = dateForSave;
+    state.dart.items = dartDateFilterOn
+      ? allItems.map(i => ({ ...i, rcept_dt: date }))
+      : allItems;
+
     if (!state.dart.items.length) {
-      showToast(`📭 ${date} 날짜의 공시가 없어요`);
+      showToast(`📭 해당 조건의 공시가 없어요`);
       btn.disabled = false; btn.textContent = '▶ 수집 시작';
       document.getElementById('dartProgressWrap').style.display = 'none';
       renderDart(); return;
